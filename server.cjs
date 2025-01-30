@@ -416,6 +416,7 @@ app.post("/api/add-product", async (req, res) => {
         price,
         image,
         maxDiscount,
+        dicountAllowed,
       },
     }); // Success response
   } catch (error) {
@@ -458,7 +459,8 @@ app.get("/api/get-products", async (req, res) => {
       CAST(price AS DOUBLE) AS price,
       image,
       maxDiscount,
-      status
+      status,
+      dicountAllowed
        FROM products  `
     );
     console.log(rows);
@@ -500,7 +502,7 @@ app.put("/api/update-product", async (req, res) => {
   if (!sku) missingFields.push("sku");
   if (!name) missingFields.push("name");
   if (!category) missingFields.push("category");
-  if (!quantity) missingFields.push("quantity");
+  // if (!quantity) missingFields.push("quantity");
   // if (!price) missingFields.push("price");
   // if (!cost) missingFields.push("cost");
   // if (!maxDiscount) missingFields.push("maxDiscount");
@@ -1055,6 +1057,64 @@ app.post("/api/get-reciept-entry-code", async (req, res) => {
     res.status(200).json(newEntryCode); // Success response with new entry code
   } catch (error) {
     console.error("Error retrieving code formats:", error); // Log error
+  }
+});
+
+app.get('/api/sales/by-date', async (req, res) => {
+  const query = `
+    SELECT 
+      DATE(post_date) AS date, 
+      SUM(net_total) AS total_net 
+    FROM saysmulx_qtmp.sales_invoices 
+    GROUP BY DATE(post_date)
+    ORDER BY date;
+  `;
+  try {
+    const pool = await SSHDBConnection; 
+    const data = await pool.query(query);
+    res.json({ data });
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'An error occurred while processing your request.'+ error.message });
+  }
+});
+
+app.get('/api/sales/by-month', async (req, res) => {
+  const query = `
+    SELECT 
+      DATE_FORMAT(post_date, '%Y-%m') AS month, 
+      SUM(net_total) AS total_net 
+    FROM saysmulx_qtmp.sales_invoices 
+    GROUP BY DATE_FORMAT(post_date, '%Y-%m')
+    ORDER BY month;
+  `;
+  try {
+    const pool = await SSHDBConnection; 
+    const data = await pool.query(query);
+    res.json({ data });
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'An error occurred while processing your request.' + error.message });
+  }
+});
+
+
+app.get('/api/sales/by-year', async (req, res) => {
+  const query = `
+    SELECT 
+      YEAR(post_date) AS year, 
+      SUM(net_total) AS total_net 
+    FROM saysmulx_qtmp.sales_invoices 
+    GROUP BY YEAR(post_date)
+    ORDER BY year;
+  `;
+  try {
+    const pool = await SSHDBConnection; 
+    const data = await pool.query(query);
+    res.json({ data });
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'An error occurred while processing your request.' + error.message });
   }
 });
 
